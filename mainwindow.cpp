@@ -328,8 +328,8 @@ MainWindow::MainWindow(QString  const & program_info,
   m_settings_read {false},
   ui(new Ui::MainWindow),
   m_config {temp_directory, m_settings, this},
-  m_rigErrorMessageBox {MessageBox::Critical, tr ("Rig Control Error")
-      , MessageBox::Cancel | MessageBox::Ok | MessageBox::Retry},
+  m_rigErrorMessageBox {JS8MessageBox::Critical, tr ("Rig Control Error")
+      , JS8MessageBox::Cancel | JS8MessageBox::Ok | JS8MessageBox::Retry},
   m_wideGraph (new WideGraph(m_settings)),
   // no parent so that it has a taskbar icon
   m_logDlg (new LogQSO (program_title (), m_settings, &m_config, nullptr)),
@@ -417,7 +417,7 @@ MainWindow::MainWindow(QString  const & program_info,
 
   // parts of the rig error message box that are fixed
   m_rigErrorMessageBox.setInformativeText (tr ("Do you want to reconfigure the radio interface?"));
-  m_rigErrorMessageBox.setDefaultButton (MessageBox::Ok);
+  m_rigErrorMessageBox.setDefaultButton (JS8MessageBox::Ok);
 
   // start audio thread and hook up slots & signals for shutdown management
   // these objects need to be in the audio thread so that invoking
@@ -572,6 +572,7 @@ MainWindow::MainWindow(QString  const & program_info,
   });
 
   setWindowTitle (program_title ());
+  buildColumnLabelMap();
 
   // Hook up working frequencies.
 
@@ -834,7 +835,7 @@ MainWindow::MainWindow(QString  const & program_info,
   auto clearActionSep = new QAction(nullptr);
   clearActionSep->setSeparator(true);
 
-  auto clearActionAll = new QAction(QString("Clear All"), nullptr);
+  auto clearActionAll = new QAction(QString("Clear All Lists"), nullptr);
   connect(clearActionAll, &QAction::triggered, this, [this](){
       if (QMessageBox::Yes != QMessageBox::question(this, "Clear All Activity", "Are you sure you would like to clear all activity?", QMessageBox::Yes|QMessageBox::No)){
           return;
@@ -965,6 +966,10 @@ MainWindow::MainWindow(QString  const & program_info,
   auto logAction = new QAction(QString("Log..."), ui->tableWidgetCalls);
   connect(logAction, &QAction::triggered, this, &MainWindow::on_logQSOButton_clicked);
 
+  // Disable default header mouseover and click behaviors, they are confusing to users because they give the
+  // appearance of allowing sorting by header clicks, which is not actually implemented
+  ui->tableWidgetRXAll->horizontalHeader()->setHighlightSections(false);
+  ui->tableWidgetRXAll->horizontalHeader()->setSectionsClickable(false);
 
   ui->tableWidgetRXAll->horizontalHeader()->setContextMenuPolicy(Qt::CustomContextMenu);
   connect(ui->tableWidgetRXAll->horizontalHeader(), &QHeaderView::customContextMenuRequested, this, [this](QPoint const &point){
@@ -1075,7 +1080,7 @@ MainWindow::MainWindow(QString  const & program_info,
 
 
 
-  auto clearAction4 = new QAction(QString("Clear"), ui->tableWidgetCalls);
+  auto clearAction4 = new QAction(QString("Clear Entire List"), ui->tableWidgetCalls);
   connect(clearAction4, &QAction::triggered, this, [this]()
   {
     clearCallActivity();
@@ -1099,7 +1104,7 @@ MainWindow::MainWindow(QString  const & program_info,
           if(Varicode::isCompoundCallsign(callsign)){
               m_config.addGroup(callsign);
           } else {
-              MessageBox::critical_message (this, QString("%1 is not a valid group").arg(callsign));
+              JS8MessageBox::critical_message (this, QString("%1 is not a valid group").arg(callsign));
           }
 
       } else {
@@ -1108,7 +1113,7 @@ MainWindow::MainWindow(QString  const & program_info,
               cd.call = callsign;
               m_callActivity[callsign] = cd;
           } else {
-              MessageBox::critical_message (this, QString("%1 is not a valid callsign or group").arg(callsign));
+              JS8MessageBox::critical_message (this, QString("%1 is not a valid callsign or group").arg(callsign));
           }
       }
 
@@ -1219,6 +1224,11 @@ MainWindow::MainWindow(QString  const & program_info,
       addCommandToStorage("STORE", d);
   });
 
+  // Disable default header mouseover and click behaviors, they are confusing to users because they give the
+  // appearance of allowing sorting by header clicks, which is not actually implemented
+  ui->tableWidgetCalls->horizontalHeader()->setHighlightSections(false);
+  ui->tableWidgetCalls->horizontalHeader()->setSectionsClickable(false);
+
   ui->tableWidgetCalls->horizontalHeader()->setContextMenuPolicy(Qt::CustomContextMenu);
   connect(ui->tableWidgetCalls->horizontalHeader(), &QHeaderView::customContextMenuRequested, this, [this](QPoint const &point){
       QMenu * menu = new QMenu(ui->tableWidgetCalls);
@@ -1315,7 +1325,7 @@ MainWindow::MainWindow(QString  const & program_info,
 
     menu->addAction(addStation);
     removeStation->setDisabled(missingCallsign);
-    removeStation->setText(selectedCall.startsWith("@") ? "Remove Group" : "Remove Station");
+    removeStation->setText(selectedCall.startsWith("@") ? "Remove This Group" : "Remove This Station");
     menu->addAction(removeStation);
 
     menu->addSeparator();
@@ -1448,7 +1458,7 @@ MainWindow::checkVersion(bool const alertOnUpToDate)
 
         SelfDestructMessageBox * m = new SelfDestructMessageBox(60,
           "New Updates Available",
-          QString("A new version (%1) of JS8Call is now available. Please see js8call.com for more details.").arg(content),
+          QString("A new version (%1) of JS8Call-improved is now available. Please see the <a href='https://github.com/JS8Call-improved/JS8Call-improved/releases'>GitHub Releases</a> for more details.").arg(content),
           QMessageBox::Information,
           QMessageBox::Ok,
           QMessageBox::Ok,
@@ -1461,7 +1471,7 @@ MainWindow::checkVersion(bool const alertOnUpToDate)
 
         SelfDestructMessageBox * m = new SelfDestructMessageBox(60,
           "No Updates Available",
-          QString("Your version (%1) of JS8Call is up-to-date.").arg(version()),
+          QString("Your version (%1) of JS8Call-improved is up-to-date.").arg(version()),
           QMessageBox::Information,
           QMessageBox::Ok,
           QMessageBox::Ok,
@@ -1473,7 +1483,7 @@ MainWindow::checkVersion(bool const alertOnUpToDate)
   });
 
   qCDebug(mainwindow_js8) << "Checking for Updates...";
-  QUrl url("http://files.js8call.com/version.txt");
+  QUrl url("https://github.com/JS8Call-improved/JS8Call-improved/releases/latest/download/version.txt");
   QNetworkRequest r(url);
   m->get(r);
 }
@@ -2525,12 +2535,12 @@ void MainWindow::dataSink(qint64 frames)
 
 void MainWindow::showSoundInError(const QString& errorMsg)
 {
-  MessageBox::critical_message (this, tr ("Error in Sound Input"), errorMsg);
+  JS8MessageBox::critical_message (this, tr ("Error in Sound Input"), errorMsg);
 }
 
 void MainWindow::showSoundOutError(const QString& errorMsg)
 {
-  MessageBox::critical_message (this, tr ("Error in Sound Output"), errorMsg);
+  JS8MessageBox::critical_message (this, tr ("Error in Sound Output"), errorMsg);
 }
 
 void MainWindow::showStatusMessage(const QString& statusMsg)
@@ -3237,7 +3247,7 @@ void MainWindow::on_actionCopyright_Notice_triggered()
                            "Philip Karn, KA9Q; and other members of the WSJT Development Group.\n\n"
                            "Further, the source code of JS8Call contains material Copyright (C) "
                            "2018-2019 by Jordan Sherer, KN4CRD.\"");
-  MessageBox::warning_message(this, message);
+  JS8MessageBox::warning_message(this, message);
 }
 
 /**
@@ -4523,12 +4533,13 @@ void MainWindow::spotAprsGrid(int dial, int offset, int snr, QString callsign, Q
 }
 
 void
-MainWindow::pskLogReport(QString const & mode,
-                         int     const   dial,
-                         int     const   offset,
-                         int     const   snr,
-                         QString const & callsign,
-                         QString const & grid)
+MainWindow::pskLogReport(QString 	const & mode,
+                         int     	const   dial,
+                         int     	const   offset,
+                         int     	const   snr,
+                         QString 	const & callsign,
+                         QString 	const & grid,
+						 QDateTime	const & utcTimestamp)
 {
   if (!m_config.spot_to_reporting_networks() ||
       (m_config.spot_blacklist().contains(callsign) ||
@@ -4538,7 +4549,8 @@ MainWindow::pskLogReport(QString const & mode,
                                       grid,
                                       dial + offset,
                                       mode,
-                                      snr);
+                                      snr,
+									  utcTimestamp);
 }
 
 void MainWindow::refuseToSendIn30mWSPRBand() {
@@ -4569,7 +4581,7 @@ void MainWindow::refuseToSendIn30mWSPRBand() {
                 QTimer::singleShot (
                     0,
                     [this]{
-                        MessageBox::warning_message(
+                        JS8MessageBox::warning_message(
                             this,
                             tr("WSPR Guard Band"),
                             tr("Please choose another Tx frequency."
@@ -5111,7 +5123,7 @@ void MainWindow::createGroupCallsignTableRows(QTableWidget *table, QString const
         count++;
     }
 
-    table->horizontalHeaderItem(startCol)->setText(count == 0 ? "Callsigns" : QString("Callsigns (%1)").arg(count));
+    table->horizontalHeaderItem(startCol)->setText(count == 0 ? columnLabel("Callsigns") : QString(columnLabel("Callsigns (%1)")).arg(count));
 
     if(!m_config.avoid_allcall()){
         table->insertRow(table->rowCount());
@@ -5394,13 +5406,13 @@ void MainWindow::resetMessageUI(){
 
 bool MainWindow::ensureCallsignSet(bool alert){
     if(m_config.my_callsign().trimmed().isEmpty()){
-        if(alert) MessageBox::warning_message(this, tr ("Please enter your callsign in the settings."));
+        if(alert) JS8MessageBox::warning_message(this, tr ("Please enter your callsign in the settings."));
         openSettings();
         return false;
     }
 
     if(m_config.my_grid().trimmed().isEmpty()){
-        if(alert) MessageBox::warning_message(this, tr ("Please enter your grid locator in the settings."));
+        if(alert) JS8MessageBox::warning_message(this, tr ("Please enter your grid locator in the settings."));
         openSettings();
         return false;
     }
@@ -5955,7 +5967,7 @@ void MainWindow::acceptQSO (QDateTime const& QSO_date_off, QString const& call, 
     if (rzult == -1) {
       bool hidden = m_logDlg->isHidden();
       m_logDlg->setHidden(true);
-      MessageBox::warning_message (this, tr ("Error sending log to N1MM"),
+      JS8MessageBox::warning_message (this, tr ("Error sending log to N1MM"),
                                    tr ("Write returned \"%1\"").arg (rzult));
       m_logDlg->setHidden(hidden);
     }
@@ -6027,7 +6039,7 @@ void MainWindow::acceptQSO (QDateTime const& QSO_date_off, QString const& call, 
       } else {
           bool hidden = m_logDlg->isHidden();
           m_logDlg->setHidden(true);
-          MessageBox::warning_message (this, tr ("Error sending log to N3FJP"),
+          JS8MessageBox::warning_message (this, tr ("Error sending log to N3FJP"),
                                        tr ("Write failed for \"%1:%2\"").arg (host).arg(port));
           m_logDlg->setHidden(hidden);
       }
@@ -6203,9 +6215,9 @@ MainWindow::setFreq(int const n)
 
 void MainWindow::on_actionErase_ALL_TXT_triggered()          //Erase ALL.TXT
 {
-  int ret = MessageBox::query_message (this, tr ("Confirm Erase"),
+  int ret = JS8MessageBox::query_message (this, tr ("Confirm Erase"),
                                          tr ("Are you sure you want to erase file ALL.TXT?"));
-  if(ret==MessageBox::Yes) {
+  if(ret==JS8MessageBox::Yes) {
     QFile f {m_config.writeable_data_dir ().absoluteFilePath ("ALL.TXT")};
     f.remove();
     m_RxLog=1;
@@ -6214,9 +6226,9 @@ void MainWindow::on_actionErase_ALL_TXT_triggered()          //Erase ALL.TXT
 
 void MainWindow::on_actionErase_js8call_log_adi_triggered()
 {
-  int ret = MessageBox::query_message (this, tr ("Confirm Erase"),
+  int ret = JS8MessageBox::query_message (this, tr ("Confirm Erase"),
                                        tr ("Are you sure you want to erase file js8call_log.adi?"));
-  if(ret==MessageBox::Yes) {
+  if(ret==JS8MessageBox::Yes) {
     QFile f {m_config.writeable_data_dir ().absoluteFilePath ("js8call_log.adi")};
     f.remove();
 
@@ -6592,6 +6604,19 @@ bool MainWindow::showColumn(QString tableKey, QString columnKey, bool default_){
     return m_showColumnsCache.value(tableKey + columnKey, QVariant(default_)).toBool();
 }
 
+QString MainWindow::columnLabel(QString defaultLabel){
+	bool minimalLabels = showColumn("all", "minimal_labels", false);
+
+	// If we are not rendering minimal labels, return the default
+	if(!minimalLabels)
+	{
+		return defaultLabel;
+	}
+
+	// If there is an entry, send it, if not, return default
+	return m_columnLabelMap.value(defaultLabel, defaultLabel);
+}
+
 void MainWindow::buildShowColumnsMenu(QMenu *menu, QString tableKey){
     QList<QPair<QString, QString>> columnKeys = {
         {"Frequency Offset", "offset"},
@@ -6606,7 +6631,8 @@ void MainWindow::buildShowColumnsMenu(QMenu *menu, QString tableKey){
         {"tdrift", false},
         {"grid", false},
         {"distance", false},
-        {"azimuth", false}
+        {"azimuth", false},
+        {"minimal_labels", false}
     };
 
     if(tableKey == "call"){
@@ -6621,9 +6647,11 @@ void MainWindow::buildShowColumnsMenu(QMenu *menu, QString tableKey){
         });
     }
 
+	columnKeys.prepend({"Minimal Column Labels", "minimal_labels"});
     columnKeys.prepend({"Show Column Labels", "labels"});
 
-    bool first = true;
+    int columnIndex = 0;
+	QString origTableKey = tableKey;
     foreach(auto p, columnKeys){
         auto columnLabel = p.first;
         auto columnKey = p.second;
@@ -6631,6 +6659,12 @@ void MainWindow::buildShowColumnsMenu(QMenu *menu, QString tableKey){
         auto a = menu->addAction(columnLabel);
         a->setCheckable(true);
 
+		// Add separator after second item
+		// If this is the second item, it is the minimal labels item, so set the table key to all
+		if(++columnIndex == 2){
+			tableKey = "all";
+			menu->addSeparator();
+		}
 
         bool showByDefault = true;
         if(defaultOverride.contains(columnKey)){
@@ -6642,10 +6676,11 @@ void MainWindow::buildShowColumnsMenu(QMenu *menu, QString tableKey){
             setShowColumn(tableKey, columnKey, a->isChecked());
         });
 
-        if(first){
-            menu->addSeparator();
-            first = false;
-        }
+		// If we have switched to a custom table key in this iteration, reset to the original key
+		if(tableKey != origTableKey)
+		{
+			tableKey = origTableKey;
+		}
     }
 }
 
@@ -7197,6 +7232,42 @@ QMap<QString, QString> MainWindow::buildMacroValues(){
     values["<MYREPLY>"] = replaceMacros(values["<MYREPLY>"], values, false);
 
     return values;
+}
+
+void MainWindow::buildColumnLabelMap()
+{
+	// This is the map of full-length strings to shortened versions
+	// Add new minimal labels here as needed
+	m_columnLabelMap = {
+		{"Callsigns", "Call"},
+		{"Callsigns (%1)", "Call(%1)"},
+		{"Offset", "Off"},
+		{"SNR", "SN"},
+		{"Time Delta", "TD"},
+		{"Speed", "Sp"},
+		{"Distance", "Dist"},
+		{"Azimuth", "Az"},
+		{"%1 ms", "%1"},
+		{"%1 dB", "%1"},
+		{"%1 Hz", "%1"}
+	};
+
+	// Populate original header maps
+	int cols = ui->tableWidgetRXAll->columnCount();
+	for (int c = 0; c < cols; ++c)
+	{
+		QString label = ui->tableWidgetRXAll->horizontalHeaderItem(c)->text();
+
+		m_origRxHeaderLabelMap[c] = label;
+	}
+
+	cols = ui->tableWidgetCalls->columnCount();
+	for (int c = 0; c < cols; ++c)
+	{
+		QString label = ui->tableWidgetCalls->horizontalHeaderItem(c)->text();
+
+		m_origCallActivityHeaderLabelMap[c] = label;
+	}
 }
 
 void MainWindow::buildSuggestionsMenu(QMenu *menu, QTextEdit *edit, const QPoint &point){
@@ -7772,16 +7843,16 @@ void MainWindow::rigFailure (QString const& reason)
         {
           switch (m_rigErrorMessageBox.standardButton (clicked_button))
             {
-            case MessageBox::Ok:
+            case JS8MessageBox::Ok:
               m_config.select_tab (1);
               QTimer::singleShot (0, this, &MainWindow::on_actionSettings_triggered);
               break;
 
-            case MessageBox::Retry:
+            case JS8MessageBox::Retry:
               QTimer::singleShot (0, this, &MainWindow::rigOpen);
               break;
 
-            case MessageBox::Cancel:
+            case JS8MessageBox::Cancel:
               QTimer::singleShot (0, this, &MainWindow::close);
               break;
 
@@ -7880,13 +7951,20 @@ void MainWindow::displayTransmit(){
     update_dynamic_property (ui->monitorTxButton, "transmitting", m_transmitting);
 }
 
-void MainWindow::updateModeButtonText(){
-    auto selectedCallsign = callsignSelected();
+bool MainWindow::presentlyWantHBReplies() {
+    return
+        ui->actionModeAutoreply->isChecked() &&
+            ui->actionHeartbeatAcknowledgements->isChecked() &&
+            // The folloing line is disputed, as it disallows replies to HBs
+            // if there is any (unrelated) activity on the band:
+            m_messageBuffer.isEmpty() &&
+            (!m_config.heartbeat_qso_pause() || m_prevSelectedCallsign.isEmpty());
+}
 
+void MainWindow::updateModeButtonText(){
     auto multi = ui->actionModeMultiDecoder->isChecked();
     auto autoreply = ui->actionModeAutoreply->isChecked();
     auto heartbeat = ui->actionModeJS8HB->isEnabled() && ui->actionModeJS8HB->isChecked();
-    auto ack = autoreply && ui->actionHeartbeatAcknowledgements->isChecked() && m_messageBuffer.isEmpty() && (!m_config.heartbeat_qso_pause() || selectedCallsign.isEmpty());
 
     auto modeText = JS8::Submode::name(m_nSubMode);
     if(multi){
@@ -7902,7 +7980,7 @@ void MainWindow::updateModeButtonText(){
     }
 
     if(heartbeat){
-        if(ack){
+        if(presentlyWantHBReplies()){
             modeText += QString("+HB+ACK");
         } else {
             modeText += QString("+HB");
@@ -7950,15 +8028,7 @@ void MainWindow::updateHBButtonDisplay() {
         QDateTime nextHeartbeat = m_hb_loop->nextActivity();
         long secs = std::lround(now.msecsTo(nextHeartbeat) / 1000.0);
 
-        // qCDebug(mainwindow_js8)
-        //         << "updateHBButtonDisplay, signal due at" << nextHeartbeat
-        //         << "so" << secs << "s to go";
-
-        bool wantAck = ui->actionModeAutoreply->isChecked() &&
-            ui->actionHeartbeatAcknowledgements->isChecked() &&
-            m_messageBuffer.isEmpty() &&
-            (!m_config.heartbeat_qso_pause() || callsignSelected().isEmpty());
-        QString hbBase = wantAck ? "HB + ACK" : "HB";
+        QString hbBase = presentlyWantHBReplies() ? "HB + ACK" : "HB";
 
         if(secs > 0) {
             ui->hbMacroButton->setText(QString("%1 (%2)").arg(hbBase).arg(secs));
@@ -7967,7 +8037,11 @@ void MainWindow::updateHBButtonDisplay() {
             ui->hbMacroButton->setText(QString("%1 (now)").arg(hbBase));
         }
     } else {
-        ui->hbMacroButton->setText("HB");
+        if(presentlyWantHBReplies()) {
+            ui->hbMacroButton->setText("HB + ACK");
+        } else {
+            ui->hbMacroButton->setText("HB");
+        }
     }
 }
 
@@ -8247,12 +8321,12 @@ void MainWindow::callsignSelectedChanged(QString /*old*/, QString selectedCall){
     ui->callDetailTextBrowser->setVisible(!selectedCall.isEmpty() && (!hearing.isEmpty() || !heardby.isEmpty()));
 #endif
 
+    m_prevSelectedCallsign = selectedCall;
+
     // immediately update the display
     updateButtonDisplay();
     updateTextDisplay();
     statusChanged();
-
-    m_prevSelectedCallsign = selectedCall;
 }
 
 void MainWindow::clearCallsignSelected(){
@@ -9857,7 +9931,7 @@ void MainWindow::processSpots() {
         qCDebug(mainwindow_js8) << "spotting call to reporting networks" << d.call << d.snr << d.dial << d.offset;
 
         spotReport(d.submode, d.dial, d.offset, d.snr, d.call, d.grid);
-        pskLogReport("JS8", d.dial, d.offset, d.snr, d.call, d.grid);
+        pskLogReport("JS8", d.dial, d.offset, d.snr, d.call, d.grid, d.utcTimestamp);
 
         if(canSendNetworkMessage()){
             sendNetworkMessage("RX.SPOT", "", {
@@ -9955,6 +10029,13 @@ void MainWindow::displayActivity(bool force) {
 // updateBandActivity
 void MainWindow::displayBandActivity() {
     auto now = DriftingDateTime::currentDateTimeUtc();
+
+	// Reset the header label text to accommodate minimal label setting
+	int cols = ui->tableWidgetRXAll->columnCount();
+	for (int c = 0; c < cols; ++c)
+	{
+		ui->tableWidgetRXAll->horizontalHeaderItem(c)->setText(columnLabel(m_origRxHeaderLabelMap[c]));
+	}
 
     ui->tableWidgetRXAll->setFont(m_config.table_font());
 
@@ -10166,7 +10247,7 @@ void MainWindow::displayBandActivity() {
                 int row = ui->tableWidgetRXAll->rowCount() - 1;
                 int col = 0;
 
-                auto offsetItem = new QTableWidgetItem(QString("%1 Hz").arg(offset));
+                auto offsetItem = new QTableWidgetItem(QString(columnLabel("%1 Hz")).arg(offset));
                 offsetItem->setData(Qt::UserRole, QVariant(offset));
                 offsetItem->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
                 ui->tableWidgetRXAll->setItem(row, col++, offsetItem);
@@ -10177,11 +10258,11 @@ void MainWindow::displayBandActivity() {
                 ui->tableWidgetRXAll->setItem(row, col++, ageItem);
 
                 auto snrText = Varicode::formatSNR(snr);
-                auto snrItem = new QTableWidgetItem(snrText.isEmpty() ? "" : QString("%1 dB").arg(snrText));
+                auto snrItem = new QTableWidgetItem(snrText.isEmpty() ? "" : QString(columnLabel("%1 dB")).arg(snrText));
                 snrItem->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
                 ui->tableWidgetRXAll->setItem(row, col++, snrItem);
 
-                auto tdriftItem = new QTableWidgetItem(QString("%1 ms").arg((int)(1000*tdrift)));
+                auto tdriftItem = new QTableWidgetItem(QString(columnLabel("%1 ms")).arg((int)(1000*tdrift)));
                 tdriftItem->setData(Qt::UserRole, QVariant(tdrift));
                 tdriftItem->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
                 ui->tableWidgetRXAll->setItem(row, col++, tdriftItem);
@@ -10306,6 +10387,13 @@ void MainWindow::displayBandActivity() {
 // updateCallActivity
 void MainWindow::displayCallActivity() {
     auto now = DriftingDateTime::currentDateTimeUtc();
+
+	// Reset the header label text to accommodate minimal label setting
+	int cols = ui->tableWidgetCalls->columnCount();
+	for (int c = 0; c < cols; ++c)
+	{
+		ui->tableWidgetCalls->horizontalHeaderItem(c)->setText(columnLabel(m_origCallActivityHeaderLabelMap[c]));
+	}
 
     ui->tableWidgetCalls->setFont(m_config.table_font());
 
@@ -10522,16 +10610,16 @@ void MainWindow::displayCallActivity() {
                 ui->tableWidgetCalls->setItem(row, col++, ageItem);
 
                 auto snrText = Varicode::formatSNR(d.snr);
-                auto snrItem = new QTableWidgetItem(snrText.isEmpty() ? "" : QString("%1 dB").arg(snrText));
+                auto snrItem = new QTableWidgetItem(snrText.isEmpty() ? "" : QString(columnLabel("%1 dB")).arg(snrText));
                 snrItem->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
                 ui->tableWidgetCalls->setItem(row, col++, snrItem);
 
-                auto offsetItem = new QTableWidgetItem(QString("%1 Hz").arg(d.offset));
+                auto offsetItem = new QTableWidgetItem(QString(columnLabel("%1 Hz")).arg(d.offset));
                 offsetItem->setData(Qt::UserRole, QVariant(d.offset));
                 offsetItem->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
                 ui->tableWidgetCalls->setItem(row, col++, offsetItem);
 
-                auto tdriftItem = new QTableWidgetItem(QString("%1 ms").arg((int)(1000*d.tdrift)));
+                auto tdriftItem = new QTableWidgetItem(QString(columnLabel("%1 ms")).arg((int)(1000*d.tdrift)));
                 tdriftItem->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
                 ui->tableWidgetCalls->setItem(row, col++, tdriftItem);
 
@@ -11281,7 +11369,7 @@ void MainWindow::write_frequency_entry (QString const& file_name){
       this,
       message = tr("Cannot open \"%1\" for append: %2").arg(f2.fileName()).arg(f2.errorString())
     ]{
-      MessageBox::warning_message(this, tr("Log File Error"), message);
+      JS8MessageBox::warning_message(this, tr("Log File Error"), message);
     });
   }
 }
@@ -11311,7 +11399,7 @@ void MainWindow::write_transmit_entry (QString const& file_name)
         this,
         message = tr("Cannot open \"%1\" for append: %2").arg(f.fileName()).arg(f.errorString())
       ] {
-        MessageBox::warning_message(this, tr("Log File Error"), message);
+        JS8MessageBox::warning_message(this, tr("Log File Error"), message);
       });
     }
 }
@@ -11348,7 +11436,7 @@ MainWindow::writeAllTxt(QStringView message)
   }
   else
   {
-    MessageBox::warning_message(this,
+    JS8MessageBox::warning_message(this,
                                tr("File Open Error"),
                                tr("Cannot open \"%1\" for append: %2")
                                .arg(f.fileName())
@@ -11381,7 +11469,7 @@ MainWindow::writeMsgTxt(QStringView message,
     }
     else
     {
-      MessageBox::warning_message(this,
+      JS8MessageBox::warning_message(this,
                                   tr("File Open Error"),
                                   tr("Cannot open \"%1\" for append: %2")
                                   .arg(f.fileName())

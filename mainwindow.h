@@ -43,7 +43,7 @@
 #include "PSKReporter.hpp"
 #include "logbook/logbook.h"
 #include "commons.h"
-#include "MessageBox.hpp"
+#include "JS8MessageBox.hpp"
 #include "NetworkAccessManager.hpp"
 #include "qpriorityqueue.h"
 #include "varicode.h"
@@ -292,6 +292,7 @@ private slots:
   void buildCallActivitySortByMenu(QMenu * menu);
   void buildQueryMenu(QMenu *, QString callsign);
   QMap<QString, QString> buildMacroValues();
+  void buildColumnLabelMap();
   void buildSuggestionsMenu(QMenu *menu, QTextEdit *edit, const QPoint &point);
   void buildSavedMessagesMenu(QMenu *menu);
   void buildRelayMenu(QMenu *menu);
@@ -366,7 +367,7 @@ private:
 
   Q_SIGNAL void pskReporterSendReport(bool);
   Q_SIGNAL void pskReporterSetLocalStation(QString, QString, QString);
-  Q_SIGNAL void pskReporterAddRemoteStation(QString, QString, Radio::Frequency, QString, int);
+  Q_SIGNAL void pskReporterAddRemoteStation(QString, QString, Radio::Frequency, QString, int, QDateTime);
 
   Q_SIGNAL void spotClientSetLocalStation(QString, QString, QString);
   Q_SIGNAL void spotClientEnqueueCmd(QString, QString, QString, QString, QString, QString, QString, int, int, int, int);
@@ -418,6 +419,8 @@ private:
   void setFreq(int);
   void transmit();
 
+  bool presentlyWantHBReplies();
+
 
   QString m_nextFreeTextMsg;
 
@@ -432,7 +435,7 @@ private:
 
   // other windows
   Configuration m_config;
-  MessageBox m_rigErrorMessageBox;
+  JS8MessageBox m_rigErrorMessageBox;
 
   QScopedPointer<WideGraph> m_wideGraph;
   QScopedPointer<LogQSO> m_logDlg;
@@ -701,6 +704,10 @@ private:
   int m_lastClosedMessageBufferOffset;
   QMap<QString, CallDetail> m_callActivity; // call -> (last freq, last timestamp)
 
+  QMap<int, QString> m_origRxHeaderLabelMap; // colIndex, label
+  QMap<int, QString> m_origCallActivityHeaderLabelMap; // colIndex, label
+  QMap<QString, QString> m_columnLabelMap; // full, minimal
+
   QMap<QString, QSet<QString>> m_heardGraphOutgoing; // callsign -> [stations who've this callsign has heard]
   QMap<QString, QSet<QString>> m_heardGraphIncoming; // callsign -> [stations who've heard this callsign]
 
@@ -770,7 +777,7 @@ private:
   void spotReport(int submode, int dial, int offset, int snr, QString const & callsign, QString const & grid);
   void spotCmd(CommandDetail const & cmd);
   void spotAprsCmd(CommandDetail const & cmd);
-  void pskLogReport(QString const & mode, int dial, int offset, int snr, QString const & callsign, QString const & grid);
+  void pskLogReport(QString const & mode, int dial, int offset, int snr, QString const & callsign, QString const & grid, QDateTime const & utcTimestamp);
   void spotAprsGrid(int dial, int offset, int snr, QString callsign, QString grid);
   Radio::Frequency dialFrequency();
   void setSubmode(int submode);
@@ -828,6 +835,7 @@ private:
   void add_child_to_event_filter (QObject *);
   void remove_child_from_event_filter (QObject *);
   void setup_status_bar ();
+  QString columnLabel(QString defaultLabel);
 
   void resetIdleTimer();
   void incrementIdleTimer();

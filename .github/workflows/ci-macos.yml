@@ -1,0 +1,46 @@
+permissions:
+  contents: read
+
+name: CI Build for MacOS 15 Arm64 (M1 and higher)
+
+on: [workflow_dispatch, pull_request]
+
+env:
+  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
+  BUILD_TYPE: Release
+  build_package: libusb hamlib fftw boost ffmpeg@7
+
+jobs:
+  build_macos-latest:
+    runs-on: macos-15
+    permissions: write-all
+
+    steps:
+    - uses: actions/checkout@v5
+
+    - name: Work around for /usr/local perms and grab arch/os info
+      run: |
+        sudo chown runner:admin /usr/local
+
+    - name: Install dependencies (MacOS)
+      run: |
+        brew update
+        brew install libusb hamlib fftw boost ffmpeg@7
+        
+    - name: Install Qt 6.9.3
+      uses: jurplel/install-qt-action@v3
+      with:
+        cache: true
+        aqtversion: '==3.1.*'
+        version: '6.9.3'
+        host: 'mac'
+        target: 'desktop'
+        arch: 'clang_64'
+        modules: 'qtmultimedia qtserialport'
+        archives: 'qtsvg qtdeclarative qtbase'
+
+    - name: Build JS8Call
+      run: |
+        mkdir -p ./build && cd ./build
+        cmake -DCMAKE_PREFIX_PATH="/usr/local/js8lib" ..
+        make
