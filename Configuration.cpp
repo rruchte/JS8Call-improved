@@ -381,6 +381,7 @@ public:
 
   void transceiver_frequency (Frequency);
   void transceiver_tx_frequency (Frequency);
+  void transceiver_split_frequency (Frequency, Frequency);
   void transceiver_mode (MODE);
   void transceiver_ptt (bool);
   void sync_transceiver (bool force_signal);
@@ -901,6 +902,12 @@ void Configuration::transceiver_tx_frequency (Frequency f)
 {
   qCDebug (configuration_js8) << "Configuration::transceiver_tx_frequency:" << f << m_->cached_rig_state_;
   m_->transceiver_tx_frequency (f);
+}
+
+void Configuration::transceiver_split_frequency (Frequency fRx, Frequency fTx)
+{
+	qCDebug (configuration_js8) << "Configuration::transceiver_split_frequency: RX:" << fRx << " TX:" << fTx << m_->cached_rig_state_;
+	m_->transceiver_split_frequency (fRx, fTx);
 }
 
 void Configuration::transceiver_mode (MODE mode)
@@ -3619,6 +3626,38 @@ void Configuration::impl::transceiver_tx_frequency (Frequency f)
 
       Q_EMIT set_transceiver (cached_rig_state_, ++transceiver_command_number_);
     }
+}
+
+void Configuration::impl::transceiver_split_frequency (Frequency fRx, Frequency fTx)
+{
+	cached_rig_state_.online (true); // we want the rig online
+	set_cached_mode ();
+
+	// apply any offset & calibration
+	// we store the offset here for use in feedback from the rig, we
+	// cannot absolutely determine if the offset should apply but by
+	// simply picking an offset when the Rx frequency is set and
+	// sticking to it we get sane behaviour
+	cached_rig_state_.frequency (apply_calibration (fRx));
+
+	if (!fTx || split_mode ())
+	{
+		cached_rig_state_.split (fTx);
+		cached_rig_state_.tx_frequency (fTx);
+
+		// lookup offset for tx and apply calibration
+		if (fTx)
+		{
+			// apply and offset and calibration
+			// we store the offset here for use in feedback from the
+			// rig, we cannot absolutely determine if the offset should
+			// apply but by simply picking an offset when the Rx
+			// frequency is set and sticking to it we get sane behaviour
+			cached_rig_state_.tx_frequency (apply_calibration (fTx));
+		}
+	}
+
+	Q_EMIT set_transceiver (cached_rig_state_, ++transceiver_command_number_);
 }
 
 void Configuration::impl::transceiver_mode (MODE m)

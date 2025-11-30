@@ -11229,10 +11229,12 @@ void MainWindow::setRig (Frequency f)
 	{
 		if (m_config.split_mode ())
 		{
-			Q_EMIT m_config.transceiver_tx_frequency (m_freqTxNominal);
+			Q_EMIT m_config.transceiver_split_frequency (m_freqNominal, m_freqTxNominal);
 		}
-
-		Q_EMIT m_config.transceiver_frequency (m_freqNominal);
+		else
+		{
+			Q_EMIT m_config.transceiver_frequency (m_freqNominal);
+		}
 	}
 }
 

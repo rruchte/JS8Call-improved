@@ -267,6 +267,10 @@ public:
   // rationalise_mode means ensure TX uses same mode as RX.
   Q_SLOT void transceiver_tx_frequency (Frequency = 0u);
 
+  // Setting a non zero TX frequency means split operation
+  // rationalise_mode means ensure TX uses same mode as RX.
+  Q_SLOT void transceiver_split_frequency (Frequency = 0u, Frequency = 0u);
+
   // Set transceiver mode.
   //
   // Rationalise means ensure TX uses same mode as RX.
