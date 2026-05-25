@@ -36,8 +36,7 @@ NotificationAudio::~NotificationAudio() { stop(); }
  * @param message The status message.
  */
 void NotificationAudio::status(QString const message) {
-    if (message == "Idle")
-        stop();
+    qCDebug(notificationaudio_js8) << "notification status:" << message;
 }
 
 /**

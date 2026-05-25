@@ -9,6 +9,7 @@
 #include <QAudioFormat>
 #include <QAudioSink>
 #include <QBuffer>
+#include <QElapsedTimer>
 #include <QObject>
 #include <qmath.h>
 
@@ -36,6 +37,13 @@ private slots:
 
 private:
     void release();
+    bool ensureObjectThread(std::function<void()> fn);
+    void logState(QString const &where) const;
+
+    QElapsedTimer                 m_lifetimeTimer;
+    quint64                       m_playSerial = 0;
+    quint64                       m_sinkCreateCount = 0;
+    quint64                       m_sinkDestroyCount = 0;
 
     QAudioDevice                  m_device;
     std::unique_ptr<QAudioSink>   m_sink;
