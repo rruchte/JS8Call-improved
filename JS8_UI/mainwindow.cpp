@@ -7,6 +7,7 @@
 
 #include "mainwindow.h"
 
+#include "JS8_Audio/TCIAudioOutput.h"
 #include "moc_mainwindow.cpp"
 
 static char message[29];
@@ -2620,8 +2621,13 @@ void UI_Constructor::startTx() {
 void UI_Constructor::transmit() {
     if (m_modulator->isIdle()) {
         qDebug(mainwindow_js8) << "Asking the modulator to emit audio.";
-        Q_EMIT sendMessage(freq() + m_XIT, m_nSubMode, m_TxDelay, m_soundOutput,
-                           m_config.audio_output_channel());
+
+        AudioOutputStream *stream = m_audioOutput;
+        AudioDevice::Channel channel = m_config.audio_output_channel();
+
+        Q_EMIT sendMessage(freq() + m_XIT, m_nSubMode, m_TxDelay, stream,
+                           channel);
+
         ui->signal_meter_widget->setValue(0, 0);
     } else {
         qDebug(mainwindow_js8) << "Not asking the modulator to emit audio as "
